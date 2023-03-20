@@ -1,13 +1,26 @@
 import torch
-import numpy as np
 import base64
+import os
 
 from io import BytesIO
-from flask import Flask , json, request ,send_file
+from flask import Flask , json, request
 from werkzeug.exceptions import HTTPException
 from PIL import Image
+from datetime import datetime
+from flask import Flask, request, jsonify
+from werkzeug.utils import secure_filename
+from dotenv import load_dotenv 
+
+load_dotenv()
+
+UPLOAD_FOLDER = '/Users/VIIXV/workspace/seyes-detection/model'
+ALLOWED_EXTENSIONS = set(['pt'])
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1) [1].lower() in ALLOWED_EXTENSIONS
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/')
 def healthCheck():  
@@ -15,28 +28,25 @@ def healthCheck():
 
 @app.route('/detect', methods=['POST'])
 def detectImage():  
-   ID = request.form.get("id")
    image = request.files['image']
-  #  nparr = np.fromstring(image, np.uint8)
-   print(ID)
    print(image)
-  #  print(nparr)
-   img = Image.open(image)  # load with Pillow
+   img = Image.open(image)
 
-   model = torch.hub.load('ultralytics/yolov5', 'custom', 'bestV5.pt')
+   model = torch.hub.load('ultralytics/yolov5', 'custom', 'model/best.pt')
 
-   # Images
    imgs = [img]   
-   # Inference
    results = model(imgs)
+   
+   results.ims
+   results.render()
 
-   # Results
-   results.print()
-   # results.show()  # or .show()
+   person_count = str(results.pandas().xyxy[0].value_counts('name').person)
+   com_on_count = str(results.pandas().xyxy[0].value_counts('name').com_on)
+   acc = (sum(results.pandas().xyxy[0].value_counts('confidence').index)/sum(results.pandas().xyxy[0].value_counts('confidence')))*100
    
-   results.ims # array of original images (as np array) passed to model for inference
-   results.render()  # updates results.ims with boxes and labels
-   
+   now = datetime.now()
+   dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+
    b64Image = ""
    
    for im in results.ims:
@@ -46,17 +56,19 @@ def detectImage():
        b64Image = base64.b64encode(buffered.getvalue()).decode('utf-8')
     
  
-   uri = ("data:image/jpeg" +";" +
+   urL = ("data:image/jpeg" +";" +
        "base64," + b64Image)
     
-   return uri
+   return {"phote_url":urL,
+           "person_count" : person_count,
+           "com_on_count" : com_on_count,
+           "accuracy" : '{0:.4g}'.format(acc),
+           "datetime" : dt_string}
 
 @app.errorhandler(HTTPException)
 def handle_exception(e):
     """Return JSON instead of HTML for HTTP errors."""
-    # start with the correct headers and status code from the error
     response = e.get_response()
-    # replace the body with JSON
     response.data = json.dumps({
         "code": e.code,
         "name": e.name,
@@ -65,6 +77,18 @@ def handle_exception(e):
     response.content_type = "application/json"
     return response
 
-if __name__ == '__main__':
-   app.run(host="0.0.0.0", port=5000, debug=True)
+@app.route('/upload', methods=['POST'])
+def upload_media():
+    if 'file' not in request.files: 
+        return jsonify({'error': 'media not provided'}), 400
+    file= request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'no file selected'}), 400
+    if file and allowed_file(file.filename):
+        filename = secure_filename (file.filename)
+        file.save(os.path.join(app.config ['UPLOAD_FOLDER'], filename)) 
+    return jsonify({'msg': 'media uploaded successfully'})
 
+
+if __name__ == '__main__':
+   app.run(host="0.0.0.0", port=os.getenv("PORT_DETEC") ,debug=True)
