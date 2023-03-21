@@ -2,6 +2,7 @@ import torch
 import base64
 import os
 import io
+import matplotlib.pyplot as plt
 
 from io import BytesIO
 from flask import Flask , json, request
@@ -14,7 +15,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-UPLOAD_FOLDER = '/workspace/seyes-detection/model'
+UPLOAD_FOLDER = '/Users/bubpa/workspace/seyes-detection/model'
 ALLOWED_EXTENSIONS = set(['pt'])
 
 def allowed_file(filename):
@@ -25,7 +26,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/')
 def healthCheck():  
-   return 'Hi from seyes detect micro service' 
+   return 'Hi from seyes detect micro service'
+ 
 
 @app.route('/detect', methods=['POST'])
 def detectImage():  
@@ -35,11 +37,14 @@ def detectImage():
    
    model = torch.hub.load('ultralytics/yolov5', 'custom', 'model/best.pt')
 
+
    imgs = [img]   
    results = model(imgs)
-   
    results.ims
    results.render()
+   output_html = results.render()
+   output_html = output_html.replace("<style>", "<style> .d3graph rect {stroke: red !important;} ")
+   
 
    df = results.pandas().xyxy[0]
    
@@ -83,13 +88,19 @@ def detectImage():
     url = ("data:image/jpeg" +";" +
        "base64," + base64_data)
     
-   return {"phote_url":url,
+
+   res = {
+    #    "phote_url":url,
            "person_count" : person_count,
            "com_on_count" : com_on_count,
            "accuracy" : '{0:.4g}'.format(acc),
            "date" : date,
            "time" : time,
            "status_detec" : status_detec}
+    
+   print(res)
+   return  url
+
 
 @app.errorhandler(HTTPException)
 def handle_exception(e):
@@ -111,7 +122,7 @@ def upload_media():
     if file.filename == '':
         return jsonify({'error': 'no file selected'}), 400
     if file and allowed_file(file.filename):
-        filename = secure_filename (file.filename)
+        filename = "best.pt"
         file.save(os.path.join(app.config ['UPLOAD_FOLDER'], filename)) 
     return jsonify({'msg': 'uploaded successfully'})
 
