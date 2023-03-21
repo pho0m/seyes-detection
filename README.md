@@ -3,4 +3,5 @@
 command for use
 
 - `copy .env.example file`
-- `add python lib`
+- `pip install -r /path/to/requirements.txt`
+- `make run`
