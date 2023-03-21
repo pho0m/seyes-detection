@@ -2,7 +2,6 @@ import torch
 import base64
 import os
 import io
-import matplotlib.pyplot as plt
 
 from io import BytesIO
 from flask import Flask , json, request
@@ -10,13 +9,15 @@ from werkzeug.exceptions import HTTPException
 from PIL import Image
 from datetime import datetime
 from flask import Flask, request, jsonify
-from werkzeug.utils import secure_filename
 from dotenv import load_dotenv 
+
 
 load_dotenv()
 
 UPLOAD_FOLDER = '/Users/bubpa/workspace/seyes-detection/model'
 ALLOWED_EXTENSIONS = set(['pt'])
+
+model = torch.hub.load('ultralytics/yolov5', 'custom', 'model/best.pt')
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1) [1].lower() in ALLOWED_EXTENSIONS
@@ -34,17 +35,11 @@ def detectImage():
    image = request.files['image']
    print(image)
    img = Image.open(image)
-   
-   model = torch.hub.load('ultralytics/yolov5', 'custom', 'model/best.pt')
-
 
    imgs = [img]   
    results = model(imgs)
    results.ims
    results.render()
-   output_html = results.render()
-   output_html = output_html.replace("<style>", "<style> .d3graph rect {stroke: red !important;} ")
-   
 
    df = results.pandas().xyxy[0]
    
@@ -60,6 +55,18 @@ def detectImage():
     img.save(img_bytes, format='JPEG')
     img_bytes = img_bytes.getvalue()
     base64_data = base64.b64encode(img_bytes).decode('utf-8')
+   elif df.value_counts('name').person:
+    isDetec = True
+    person_count = str(results.pandas().xyxy[0].value_counts('name').person)
+    com_on_count = 0
+    acc = (sum(results.pandas().xyxy[0].value_counts('confidence').index)/sum(results.pandas().xyxy[0].value_counts('confidence')))*100
+    status_detec = "Detected"  
+   elif df.value_counts('name').com_on:
+    isDetec = True
+    person_count = 0
+    com_on_count = str(results.pandas().xyxy[0].value_counts('name').com_on)
+    acc = (sum(results.pandas().xyxy[0].value_counts('confidence').index)/sum(results.pandas().xyxy[0].value_counts('confidence')))*100
+    status_detec = "Detected"  
    else:
     isDetec = True
     person_count = str(results.pandas().xyxy[0].value_counts('name').person)
@@ -89,17 +96,15 @@ def detectImage():
        "base64," + base64_data)
     
 
-   res = {
-    #    "phote_url":url,
+   res = { "image":url,
            "person_count" : person_count,
            "com_on_count" : com_on_count,
-           "accuracy" : '{0:.4g}'.format(acc),
+           "accuracy" : '{0:.4g}'.format(acc)+'%',
            "date" : date,
            "time" : time,
            "status_detec" : status_detec}
     
-   print(res)
-   return  url
+   return res
 
 
 @app.errorhandler(HTTPException)
