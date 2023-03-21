@@ -35,17 +35,15 @@ def detectImage():
    model = torch.hub.load('ultralytics/yolov5', 'custom', 'model/best.pt')
 
    imgs = [img]   
-   results = model(imgs)
+   results = model(imgs, size=640)
    
-   results.ims
-   results.render()
-
    person_count = str(results.pandas().xyxy[0].value_counts('name').person)
    com_on_count = str(results.pandas().xyxy[0].value_counts('name').com_on)
    acc = (sum(results.pandas().xyxy[0].value_counts('confidence').index)/sum(results.pandas().xyxy[0].value_counts('confidence')))*100
    
    now = datetime.now()
-   dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+   date = now.strftime("%d/%m/%Y")
+   time = now.strftime("%H:%M:%S")
 
    b64Image = ""
    
@@ -59,11 +57,12 @@ def detectImage():
    urL = ("data:image/jpeg" +";" +
        "base64," + b64Image)
     
-   return {"phote_url":urL,
+   return {"image_url":urL,
            "person_count" : person_count,
            "com_on_count" : com_on_count,
            "accuracy" : '{0:.4g}'.format(acc),
-           "datetime" : dt_string}
+           "date" : date,
+           "time" : time}
 
 @app.errorhandler(HTTPException)
 def handle_exception(e):
