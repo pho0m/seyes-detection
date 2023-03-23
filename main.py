@@ -43,8 +43,8 @@ def detectImage():
 
    df = results.pandas().xyxy[0]
 
-   person_count = ""
-   com_on_count = ""
+   person_count = "0"
+   com_on_count = "0"
 
    dupes = [x for n, x in enumerate(df['name'].to_numpy()) if x not in df['name'].to_numpy()[:n]]
 
