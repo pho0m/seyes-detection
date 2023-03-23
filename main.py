@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-UPLOAD_FOLDER = '/Users/bubpa/workspace/seyes-detection/model'
+UPLOAD_FOLDER = './model'
 ALLOWED_EXTENSIONS = set(['pt'])
 
 model = torch.hub.load('ultralytics/yolov5', 'custom', 'model/best.pt')
@@ -42,7 +42,12 @@ def detectImage():
    results.render()
 
    df = results.pandas().xyxy[0]
-   
+
+   person_count = ""
+   com_on_count = ""
+
+   dupes = [x for n, x in enumerate(df['name'].to_numpy()) if x not in df['name'].to_numpy()[:n]]
+
    isDetec = True
    
    if df.empty:
@@ -55,26 +60,23 @@ def detectImage():
     img.save(img_bytes, format='JPEG')
     img_bytes = img_bytes.getvalue()
     base64_data = base64.b64encode(img_bytes).decode('utf-8')
-   elif df.value_counts('name').person:
-    isDetec = True
-    person_count = str(results.pandas().xyxy[0].value_counts('name').person)
-    com_on_count = 0
-    acc = (sum(results.pandas().xyxy[0].value_counts('confidence').index)/sum(results.pandas().xyxy[0].value_counts('confidence')))*100
-    status_detec = "Detected"  
-   elif df.value_counts('name').com_on:
-    isDetec = True
-    person_count = 0
-    com_on_count = str(results.pandas().xyxy[0].value_counts('name').com_on)
-    acc = (sum(results.pandas().xyxy[0].value_counts('confidence').index)/sum(results.pandas().xyxy[0].value_counts('confidence')))*100
-    status_detec = "Detected"  
-   else:
-    isDetec = True
-    person_count = str(results.pandas().xyxy[0].value_counts('name').person)
-    com_on_count = str(results.pandas().xyxy[0].value_counts('name').com_on)
+   else :
+   
+    for x in dupes:
+      print(x)
+      if x == "com_on":
+        com_on_count = str(results.pandas().xyxy[0].value_counts('name').com_on)
+        person_count = "0"
+        isDetec = True
+
+      if x == "person":
+        person_count = str(results.pandas().xyxy[0].value_counts('name').person) 
+        com_on_count = "0"
+        isDetec = True
+
     acc = (sum(results.pandas().xyxy[0].value_counts('confidence').index)/sum(results.pandas().xyxy[0].value_counts('confidence')))*100
     status_detec = "Detected"
-    
-   
+
    now = datetime.now()
    date = now.strftime("%d/%m/%Y")
    time = now.strftime("%H:%M:%S")
