@@ -1,3 +1,7 @@
 .PHONY:
-run:
-	python main.py
+dev:
+	python3 main.py
+
+.PHONY:
+install:
+	pip install -r requirements.txt
