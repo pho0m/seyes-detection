@@ -77,13 +77,14 @@ def detectImage():
       print(x)
       if x == "com_on":
         com_on_count = str(results.pandas().xyxy[0].value_counts('name').com_on)
-        person_count = "0"
         isDetec = True
 
       if x == "person":
         person_count = str(results.pandas().xyxy[0].value_counts('name').person) 
-        com_on_count = "0"
         isDetec = True
+
+    if com_on_count == "" : 0
+    if person_count == "" : 0
 
     acc = (sum(results.pandas().xyxy[0].value_counts('confidence').index)/sum(results.pandas().xyxy[0].value_counts('confidence')))*100
     status_detec = "Detected"
